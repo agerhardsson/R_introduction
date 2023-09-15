@@ -1,0 +1,185 @@
+---
+title: "Sammanfattning (under konstruktion)"
+author: "Andreas Gerhardsson"
+date: "15/01/2019"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### Variabler (vektorer)
+För att tilldela en variabel värden används en pil till vänster: <-. 
+
+Det går också bra med = men är inte helt i enlighet med riktlinjer.
+
+``` {r}
+a <- 4
+b <- 7
+```
+
+R kan användas som en miniräknare
+```{r}
+4 + 7
+a + b # summan av a och b
+s <- a + b # variabel s tilldelas summan av a och b tilldelas 
+s # visa värdet av s
+```
+
+### Funktioner
+Funktioner är centrala i R. Ett exempel på en användbar funktion är "c" (=combine), som används för att kombinera flera värden till en variabel.
+
+Funktioner skrivs med paranteser, efter funktionens namn c(), inom parantesen placerar vi den information som funktionen behöver. Funktioner behandlar olika information.
+```{r}
+x <- c(2, 5, 7, 9, 15, 19, 23)
+y <- c(1, 3, 5, 7, 9, 11, 15)
+z <- c(5.5, 10.3, 8.8, 14.1, 3.3, 10.4, 5.5)
+```
+
+Vi kan använda funktioner för att göra beräkningar på variebler.
+```{r}
+x + y # visar summan av varje par i x och y, baserat på position
+sum(x + y) # visar totalsumman
+sum_xy <- sum(x, y) # vi kan naturligtivs också tilldela en variabel summan av x och y
+sum_xy # visa resultat
+
+```
+
+### Centrala funktioner
+c() = kombinera
+
+getwd() = visa vilken mapp du befinner dig i
+
+sum() = summera
+
+mean() = medelvärde
+
+sd() = standardavvikelse
+
+min() = minsta värde
+
+max() = högsta värde
+
+range() = variationsbredd
+
+summary() = summering, kan användas på många olika sätt
+
+cor() = korrelation
+
+cor.test() = korrelation med sign. test
+
+lm() = linjär modell (regression)
+
+Det går också att sätta funktioner i funktioner
+
+summary(lm()) = sing. test och summerar den linjära modell vi specificerar
+
+t.test() = t-test
+
+### Paranteser
+(...) används vid funktioner
+```{r}
+# Exempelvis för att räkna ut medelvärdet för x
+mean(x)
+```
+[...] används vid indexering
+```{r}
+# Exempelvis för att visa tredje värdet i variablen x
+x[3]
+# eller för visa värden i x där z är lika med 5.5
+x[z == 5.5] # Logiska operationer är väldigt användbara vid indexering
+
+```
+
+
+{...} används vid loopar
+```{r}
+for (i in 1:5) {
+  print(x[i]) # loopa igenom och visa värden i x från 1 till 5
+}
+```
+
+
+### Data frames
+Det mest naturliga är antagligen att data finns i en matris
+```{r}
+d_frame <- data.frame(x, y, z)
+d_frame
+```
+
+Vi kan indexera i en data frame nästa på samma sätt som i en endimensionell variabel. Men nu behöver vi definiera två värden [rad, kolumn]
+```{r}
+d_frame[4,3] # visa värdet på den fjärde raden i den tredje kolumnen
+
+d_frame[3, ] # värdet på tredje raden, alla kolumner
+d_frame[, 3] # värdet i tredje kolumnen, alla rader
+```
+
+
+I data frames kan vi också använda $
+```{r}
+
+d_frame$x # visar värdena för variabel x i data frame d_frame
+
+mean(d_frame$x) # medelvärde för variabel x i data fram d_frame
+
+d_frame$sum <- rowSums(d_frame) # använd funktionen rowSums() för att lägga till summan av varje rad i d_frame
+
+d_frame$score <- rowMeans(d_frame[, -4]) # beräkna medelvärdet, per rad för alla variabler utom i kolumn 4.
+d_frame$group <- c(1, 1, 1, 1, 2, 2, 2) # lägg till en gruppvariabel
+
+d_frame
+
+mean(d_frame$score[d_frame$group == 1]) # Medelvärdet av score för grupp 1
+
+
+tapply(d_frame$score, d_frame$group, mean) # Medelvärdet för score per grupp
+
+# Gör ett t.test för att signifikanstesta medelvärdesskillnaden mellan grupperna för variabel y
+t.test(d_frame$y~d_frame$group)
+
+```
+
+### Läsa in data från en eller flera filer
+```{r}
+data_csv <- read.csv('test.csv') # kolumner separerade med ,
+data_csv <- read.csv2('test.csv') # kolumner separerade med ; (vanligast för svenska excel)
+```
+
+Ibland kan vi behöva paket. Ett paket innehåller ett antal funktioner som inte finns i R's standarduppsättning.
+
+För att läsa in en Excel-fil
+```{r eval=FALSE, include=TRUE}
+# ladda ner och installera paket, behövs endast göras en gång
+install.packages('readxl') 
+# aktivera paketet, gör alla funktioner tillgängliga
+library(readxl)
+# Nu kan funktionen read_xlsx användas för att importera en xlsx-fil.
+data_xl <- read_xlsx('test.xlsx')
+data_xl
+
+```
+
+Ofta vill vi importera flera filer, exemeplvis om data från olika försökspersoner sparats i separata filer. Först kan vi lista vilka filer som finns och även lista filer baserat på vad de heter.
+```{r}
+# Först kan vi lista vilka filer som finns i vår mapp
+list.files()
+
+# vi kan lista alla filer som har ändelsen .csv
+csv_files <- list.files(pattern = '.csv')
+```
+
+För att importera alla filer till ett dataset kan vi göra följande:
+```{r}
+id_data <- data.frame() # 1. skapa ett tomt dataset (data frame), som vi ska fylla sen
+id_files <- list.files(pattern = 'id') # 2. Skapa en variable som innehåller  namnen på de filer vi är intresserade av. I det här fallet de som innehåller "id" någonstans.
+# 3. Utifrån den variabeln 
+for (i in 1:4) { # För varje värde från plats ett till 4...
+  id_data <- rbind(id_data, read.csv(id_files[i])) # fyll på id_data med data från filerna i variabeln id_files
+}
+summary(id_data)
+```
+
