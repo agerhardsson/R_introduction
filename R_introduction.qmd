@@ -1,9 +1,16 @@
 ---
 title: "Introduktion till R"
 author: "Niklas Edvall & Andreas Gerhardsson"
-format: html
-theme: darkly
+
+format:
+  PrettyPDF-pdf:
+    keep-tex: true
+    
 editor: visual
+
+#install extension prettypdf with: quarto install extension nrennie/PrettyPDF
+
+#https://nrennie.rbind.io/blog/making-pretty-pdf-quarto/
 ---
 
 ## R är en miniräknare
