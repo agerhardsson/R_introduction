@@ -29,7 +29,7 @@ I grunden är R en miniräknare. Nedan demonstreras hur de grundläggande fyra r
 
 ```
 
-\[1\] innan vår output visar bara att vilken rad vår output returneras på.
+`[1]` innan vår output visar bara vilken rad vår output returneras på.
 
 ## Variabler
 
@@ -46,7 +46,7 @@ b <- 3
 a + b
 ```
 
-... och passar på att representera värdet 3 med variabeln `b` och räkna ut 7+3, som nu är representerade av våra två variabler `a` och `b`
+... och passar på att representera värdet 3 med variabeln `b` och räkna ut 7+3, som nu är representerade av våra två variabler `a` och `b` - som förväntat returneras 10 som output.
 
 ## Funktioner
 
@@ -86,9 +86,9 @@ mean(length.cm)
 sd(length.cm)
 ```
 
-Vi kan använda `round()` om vi bara är intresserade av 2 decimaler för standardsavvikelse.
+Vi kan använda `round()` om vi bara är intresserade av 2 decimaler för standardavvikelse.
 
-Genom att skriva ? före en funktion får man lätt tillgång till hjälpavsnittet för en funktion och `? round()` visar att vi anger `round(data, antal decimaler)` alltså:
+Genom att skriva ? före en funktion får man lätt tillgång till hjälpavsnittet för en funktion och `? round()` visar att vi anger `round(data, antal decimaler)` för att avrunda ett värde, alltså:
 
 ```{r}
 round(11.94033, 2)
@@ -107,7 +107,7 @@ I vår variabel `length.cm` har varje datapunkt också ett index, eller en 'plat
 Med hjälp av hakparentes \[...\], eller *square brackets* på engelska, kan man komma åt ett specifikt värde i en variabel. Nedan kollar vi vad det fjärde värdet är i vår variabel `length.cm`
 
 ```{r}
-#The second value in variable "length.cm"
+#The fourth value in variable "length.cm"
 length.cm[4]
 ```
 
