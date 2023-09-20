@@ -2,9 +2,7 @@
 title: "Introduktion till R"
 author: "Niklas Edvall & Andreas Gerhardsson"
 
-format:
-  PrettyPDF-pdf:
-    keep-tex: true
+format: PrettyPDF-pdf
     
 editor: visual
 
