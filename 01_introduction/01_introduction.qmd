@@ -84,9 +84,9 @@ mean(length.cm)
 sd(length.cm)
 ```
 
-Vi kan använda `round()` om vi bara är intresserade av 2 decimaler för standardavvikelse.
+Vi kan använda `round()` om vi bara är intresserade av ett visst antal decimaler för standardavvikelse.
 
-Genom att skriva ? före en funktion får man lätt tillgång till hjälpavsnittet för en funktion och `? round()` visar att vi anger `round(data, antal decimaler)` för att avrunda ett värde, alltså:
+Genom att skriva ? före en funktion får man lätt tillgång till hjälpavsnittet för en funktion och `? round()` visar att vi anger `round(data, antal decimaler)` för att avrunda ett värde. Vill vi ha två decimaler anger vi:
 
 ```{r}
 round(11.94033, 2)
@@ -169,7 +169,7 @@ Till exempel:
 df[3,2]
 ```
 
-Om man inte specificerar en rad får man alla rader tillbaka:
+Om man inte specificerar en rad, genom att lämna tomt före kommatecknet i hakparentesen (`data[,kolumn]`) får man alla rader i den specificerade kolumnen tillbaka:
 
 ```{r}
 #What is in the 2nd column in data frame "df"?
