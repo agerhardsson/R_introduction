@@ -62,11 +62,9 @@ Fördelen med `readr` är att man också kan gå till *import dataset* och välj
 
 Vår exempel-data innehåller ett unikt ID-nummer per deltagare, info om kön, ålder och självrapporterad hörselstatus. Hörtrösklar vid fyra frekvenser (0.5, 1, 2 och 4 kHz) per öra och de 25 frågor som återfinns på frågeformuläret Tinnitus Handicap Inventory (THI). Vi kommer använda datan för att se om vi kan besvara:
 
-1.  Överensstämmer självrapporterad hörsel med tonmedelvärde?
+1.  Är det skillnad mellan hur män och kvinnor besvarar THI?
 
-2.  Är det skillnad mellan hur män och kvinnor besvarar THI?
-
-3.  Förändras hörseln med åldern?
+2.  Förändras hörseln med åldern?
 
 ## Inspektera data
 
@@ -203,68 +201,65 @@ dat$THIscore <- apply(dat[,THI.names], MARGIN = 1, FUN = sum)
 
 Vi kan nu besvara våra frågeställningar från början av dokumentet.
 
-### 1. Överensstämmer självrapporterad hörsel med tonmedelvärde?
+### 1. Är det skillnad mellan hur män och kvinnor besvarar THI?
 
-Vi börjar med att göra en enkel plot. När vi ger funktionen en faktor-variabel och en numerisk variabel skapas automatiskt en boxplot. Vi passar på att specificera en titel för ploten, och en rubrik för X- respektive Y-axel.
-
-```{r}
-plot(dat$hearing, dat$PTA4.L,
-     main = "Self-reported hearing vs PTA, Left ear",
-     xlab = "Do you experience difficulties hearing?",
-     ylab = "PTA4 (dB HL)")
-
-plot(dat$hearing, dat$PTA4.R,
-     main = "Self-reported hearing vs PTA, Right ear",
-     xlab = "Do you experience difficulties hearing?",
-     ylab = "PTA4 (dB HL)")
-```
+För att besvara denna fråga gör vi en box-plot och ett t-test mellan `THIscore` för män och kvinnor.
 
 Vi börjar enkelt, men är du estetiskt lagd finns det massor av verktyg för att göra vackra figurer med R, se till exempel [galleriet för paketet ggplot2](https://r-graph-gallery.com/ggplot2-package.html).
 
-För statistisk analys av om det är skillnad mellan de fyra grupperna gör vi en ANOVA med funktionen `aov()` för vänster respektive höger öras tonmedelvärde, spar resultatet från beräkningen i en ny variabel för vänster och höger öra separat och tittar på en sammanfattning av resultatet med `summary()`
-
 ```{r}
-#Calculate anova for PTA ~ hearing
-anova.L <- aov(data = dat, PTA4.L ~ hearing)
-anova.R <- aov(data = dat, PTA4.R ~ hearing)
-
-#Show ANOVA result summary
-summary(anova.L)
-summary(anova.R)
-```
-
-I båda fallen verkar det finnas ett starkt samband mellan tonmedelvärde och självrapporterade hörselsvårigheter (p \< 0.001).
-
-Vi gör ett *pairwise t-test* som post-hoc analys som också korrigerar p-värdet för flera jämförelser och returnerar en tabell över p-värdet som resulterar när alla fyra grupper jämförs sinsemellan.
-
-```{r}
-#Pairwise t-test Left ear PTA and self-reported hearing
-pairwise.t.test(dat$PTA4.L, dat$hearing, 
-                p.adjust.method = "bonferroni")
-
-#Pairwise t-test Right ear PTA and self-reported hearing
-pairwise.t.test(dat$PTA4.R, dat$hearing, 
-                p.adjust.method = "bonferroni")
-```
-
-### 2. Är det skillnad mellan hur män och kvinnor besvarar THI?
-
-För att besvara denna fråga gör vi ett enkel chi-square-test och en box-plot på samma sätt som innan.
-
-```{r}
-#Chi square test of THI score for sex
-chisq.test(dat$sex, dat$THIscore)
-
 #Box plot of THI score for sex
 plot(dat$sex, dat$THIscore,
      main = "THI score for Male (M) and Female (F)",
      xlab = "Sex",
      ylab = "THI total score")
+
+#Create subset of women and men separately
+F.THI <- dat[dat$sex == "F", "THIscore"]
+M.THI <- dat[dat$sex == "M", "THIscore"]
+
+#Perform t-test
+t.test(F.THI, M.THI)
 ```
 
-Vår plot verkar indikera att män fått lite högre poäng på THI men vårat test resultat 35.9, p = 0.117 påvisar ingen statistiskt signifikant skillnad mellan grupperna.
+Vår plot verkar indikera att män fått lite högre poäng på THI och vårat testresultat: **t = -3.99, p \< 0.01** påvisar en statistiskt signifikant skillnad mellan grupperna.
 
-### 3. Förändras hörseln med åldern?
+Ovan skapade vi en ny variable för män respektive kvinnors THIscore som vi sedan använde i funktionen `t.test()`. Vi hade också direkt kunnat skriva `t.test(dat[dat$sex == "F", "THIscore"], dat[dat$sex == "M", "THIscore"])` och fått samma resultat, men då är det svårt att utläsa vad som händer. Ett tredje alternativ är att använda paketet `arsenal` för att direkt ställa upp en deskriptiv tabell med funktionen `tableby()`.
+
+Kom ihåg att om vi inte har paketet installerat kör vi först `install.packages("arsenal")` och sedan `library(arsenal)` för att aktivera det i sessionen.
+
+```{r, results='asis'}
+#Read in neccesary library
+library(arsenal)
+
+#Create table using tableby()
+tab1 <- tableby(sex ~ THIscore, data = dat, 
+                digits = 1, 
+                total = FALSE)
+
+#Print table
+summary(tab1, text = TRUE)
+```
+
+På det här sättet får vi dessutom antal observationer, medelvärde och standardavvikelse utskrivet. Vi läser hjälpavsnittet genom att skriva `? tableby` i konsollen och ser att `digits = 1` kan användas för att specificera antalet decimaler, `total = FALSE` döljer kolumnen för total (män + kvinnor), och att p-värdet som rapporteras är: *equivalent to two-samples t-test.*
+
+### 2. Förändras hörseln med åldern?
+
+För att besvara den här frågan gör vi en enkel linjär regression av hur ökad ålder påverkar tonmedelvärdet PTA4 för höger och vänster öra separat. För linjär regression använder vi funktionen `lm()` och spar resultatet (vår regressionsmodell) som en en ny variabel `linear.reg.L` när vi använder PTA för vänster öra och `linear.reg.R` när vi använder PTA för höger öra.
+
+```{r}
+#Save linear regression model to variable
+linear.reg.L <- lm(data = dat, PTA4.L ~ age)
+linear.reg.R <- lm(data = dat, PTA4.R ~ age)
+
+#Print summary of linear regression model
+summary(linear.reg.L)
+summary(linear.reg.R)
+```
+
+Genom att använda `summary()` för regressionsmodellen vi skapat skrivs en överblick av resultatet ut i konsollen. Vi ser att koefficienten `age`, för vänster öra, är 0.15 med ett p-värde långt under 0.001 (3.76e-06 är 0.00000376). Det betyder att det finns ett signifikant samband mellan ålder och tonmedelvärde där vår modell påvisar att PTA4 ökar med 0.15 dB per levnadsår. Förhållandet är signifikant även för höger öra (PTA4.R) med koefficienten 0.13.
+
+Vi känner oss redo för att använda lite mer avancerade plot-alternativ. Vi specificerar att vi vill ha två plots brevid varandra (med `par()`) och skapar en scatter-plot för vänster och höger öras PTA som en funktion av ålder. Funktionen `abline()` låter oss dessutom lägga till linjen från vår linjära regressionsmodell på respektive plot.
 
 ```{r}
 #Set plot space to two columns
@@ -278,7 +273,7 @@ plot(dat$age, dat$PTA4.L,
      ylab = "PTA Left (dB HL)")
 
 #Best fit linear regression LEFT
-abline(lm(data = dat, PTA4.L ~ age), lwd = 2, col = "red")
+abline(linear.reg.L, lwd = 2, col = "red")
 
 #Scatter plot of PTA RIGHT as function of age
 plot(dat$age, dat$PTA4.R,
@@ -288,7 +283,60 @@ plot(dat$age, dat$PTA4.R,
      ylab = "PTA Right (dB HL)")
 
 #Best fit linear regression RIGHT
-abline(lm(data = dat, PTA4.R ~ age), lwd = 2, col = "red")
+abline(linear.reg.R, lwd = 2, col = "red")
+```
+
+## Sammanfattning
+
+För att gå från rådata till figurer och statistisk analys som besvarar våra två frågeställningar behöver vi totalt runt 60 rader kod, inklusive kommentarer, i vårat script (nedan).
+
+```{r}
+#| eval: false
+
+#Load libraries
+library(readr)
+library(arsenal)
+
+#Load data
+dat <- read_csv("data.csv")
+
+#Specify factor variables
+dat$item.1 <- factor(dat$item.1, 
+                      levels = c(1,2), 
+                      labels = c("M", "F"))
+
+dat$item.3 <- factor(dat$item.3, 
+                      levels = c(1,2,3,4), 
+                      labels = c("No", "Sometimes", 
+                                 "Often", "Always"))
+#Rename variables
+names(dat)[names(dat) == "item.1"] <- "sex"
+names(dat)[names(dat) == "item.2"] <- "age"
+names(dat)[names(dat) == "item.3"] <- "hearing"
+
+#Create variables for PTA
+dat$PTA4.R <- (dat$R500 + dat$R1000 + dat$R2000 + dat$R4000) / 4
+dat$PTA4.L <- (dat$L500 + dat$L1000 + dat$L2000 + dat$L4000) / 4
+
+#Create variable of column names relevant to THI
+THI.names <- paste("THI", 1:25, sep="_")
+
+#Calculate total THI score per subject
+dat$THIscore <- apply(dat[,THI.names], MARGIN = 1, FUN = sum)
+
+#Create table using tableby()
+tab1 <- tableby(sex ~ THIscore, data = dat, 
+                digits = 1, 
+                total = FALSE)
+
+#Print table
+summary(tab1, text = TRUE)
+
+#Box plot of THI score for sex
+plot(dat$sex, dat$THIscore,
+     main = "THI score for Male (M) and Female (F)",
+     xlab = "Sex",
+     ylab = "THI total score")
 
 #Save linear regression model to variable
 linear.reg.L <- lm(data = dat, PTA4.L ~ age)
@@ -297,4 +345,25 @@ linear.reg.R <- lm(data = dat, PTA4.R ~ age)
 #Print summary of linear regression model
 summary(linear.reg.L)
 summary(linear.reg.R)
+
+#Set plot space to two columns
+par(mfrow=c(1,2))
+
+#Scatter plot of PTA LEFT as function of age
+plot(dat$age, dat$PTA4.L,
+     pch = 20,
+     main = "PTA Left ear vs age",
+     xlab = "Age (years)",
+     ylab = "PTA Left (dB HL)")
+#Best fit linear regression LEFT
+abline(linear.reg.L, lwd = 2, col = "red")
+
+#Scatter plot of PTA RIGHT as function of age
+plot(dat$age, dat$PTA4.R,
+     pch = 20,
+     main = "PTA Right ear vs age",
+     xlab = "Age (years)",
+     ylab = "PTA Right (dB HL)")
+#Best fit linear regression RIGHT
+abline(linear.reg.R, lwd = 2, col = "red")
 ```
