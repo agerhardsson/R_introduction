@@ -1,0 +1,369 @@
+---
+title: "Script och importera data"
+author: "Niklas Edvall"
+format: PrettyPDF-pdf
+    
+editor: visual
+#install extension prettypdf with: quarto install extension nrennie/PrettyPDF
+#https://nrennie.rbind.io/blog/making-pretty-pdf-quarto/
+editor_options: 
+  chunk_output_type: console
+---
+
+## Script
+
+För att slippa skriva saker för hand hela tiden är steg ett när man jobbar med R att skriva ett script för sin analys. I Rstudio finns ikonen för att skapa nya filer uppe till vänster och där väljer man *R script* för att skapa ett nytt sådant.
+
+![New File - R Script](screenshots/new_script.png)
+
+I sitt script kan man nu skriva hela sin analys-pipeline från början till slut. Vill vi t.ex undersöka om det finns en statistisk signifikant skillnad mellan män och kvinnor att välja chokladglass före vanilj när de får frågan: *Skulle du hellre äta choklad- än vaniljglass?* Kan vi skriva följande analys-script.
+
+Vi kodar kön som `M` eller `F` i variabeln `sex`, och om man svarade ja som `Y` eller nej som `N` i variabeln `ic.choco`
+
+```{r}
+#Create variable for sex
+sex <- c("M", "F", "M", "M", "F", "M", "F", "F", "M", "F", "F")
+
+#Create variable for ice cream preference
+ic.choco <- c("Y", "Y", "Y", "Y", "N", "N", "N", "N", "Y", "N", "N")
+
+#Fishers exact test
+fisher.test(sex, ic.choco)
+```
+
+Vi ser att testet resulterar i ett p-värde = 0.08, vilket betyder att vi inte kan påvisa statistiskt signifikant skillnad mellan grupperna på den klassiska 5%-nivån för statistisk signifikans.
+
+## Importera data och *packages*
+
+Självklart är det galenskap att skriva in sin data manuellt med hjälp av funktionen `c()`
+
+Istället vill vi importera data från en separat datafil som vi sparat. Det finns flera olika sätt att göra detta på, här använder vi ett paket som heter `readr` för att importera vår data som finns sparad i en csv-fil.
+
+#### Paket?
+
+R har en massor av inbyggda funktioner men det finns oändligt många fler skräddarsydda funktioner att installera om man vill ha särskild funktionalitet. Dessa kommer i form av olika *packages* eller paket, och man kan ladda de man specifikt behöver för sitt aktuella script.
+
+Första gången man vill använda ett paket måste man installera det med funktionen `install.packages()`, för att installera paketet `readr` anger vi `install.packages("readr")`.
+
+När man vill använda ett paket i sitt script laddar man det med `library()`. Så, för att ladda vår data-fil med `readr` till en data frame vi kallar `dat` börjar vårat script med:
+
+```{r}
+#| include: false
+library(readr)
+
+dat <- read_csv("data.csv")
+```
+
+Fördelen med `readr` är att man också kan gå till *import dataset* och välja att importera data från en text-fil med `readr`. Då kan man även välja att t.ex exkludera vissa variabler eller ange olika format för variabler. Dialogrutan för att importera data skapar även en kod-snutt man klistra in i sitt script för att spara exakt parametrarna man använt för att importera data.
+
+![Import dataset](screenshots/import_dataset.png){width="391"}
+
+## Vår exempel-data
+
+Vår exempel-data innehåller ett unikt ID-nummer per deltagare, info om kön, ålder och självrapporterad hörselstatus. Hörtrösklar vid fyra frekvenser (0.5, 1, 2 och 4 kHz) per öra och de 25 frågor som återfinns på frågeformuläret Tinnitus Handicap Inventory (THI). Vi kommer använda datan för att se om vi kan besvara:
+
+1.  Är det skillnad mellan hur män och kvinnor besvarar THI?
+
+2.  Förändras hörseln med åldern?
+
+## Inspektera data
+
+För att få en första överblick kan vi inspektera vår data. Enklast är att klicka på variabeln *dat* för vår data frame i det övre fönstret till höger i Rstudio.
+
+![Vår data frame "dat"](screenshots/view_data.png)
+
+Nedan ser vi med funktionen `dim()` att vår data har dimension 200x34, dvs 200 observationer (rader) för 37 olika variabler (kolumner). Funktionen `names()` returnerar namnen för alla kolumner i vår data. I funktionen `head()` specificerar vi att få tillbaka de första 3 raderna och 8 kolumnerna.
+
+```{r}
+#Dimensions of dat frame
+dim(dat)
+
+#Column names in dat frame
+names(dat)
+
+#Look at first 3 rows and 8 columns of dat
+head(dat, c(3,8))
+```
+
+Notera att vi även ser vilken **typ** av variabel vi har i returen för `head()`, under kolumnens namn anges `<dbl>`, en förkortning för *double precision floating point* vilket betyder numerisk data. Vi behöver städa lite i vår data för att specificera vad som är numerisk data och vad som är kategorisk data.
+
+## Städa data
+
+### Kategoriska variabler
+
+Kategoriska variabler i R kallas för faktor-variabler. Vi specificerar en faktor-variabel med funktionen `factor()`. Vill vi ange att variabeln *item.1* i vår data är en faktor är det dock ingen idé att bara ange:
+
+```{r}
+#Make factor of item.1
+factor(dat$item.1)
+```
+
+Visserligen returneras *item.1* som en faktor, men vi måste spara den outputen till vår data frame genom att ange:
+
+```{r}
+#Make factor and write to data frame
+dat$item.1 <- factor(dat$item.1)
+```
+
+Vi råkar veta att *item.1* kodar för kön och kan göra detta tydligt genom att specificera ytterligare parametrar i funktionen `factor()` enligt nedan. Parametrarna `levels` (vilka kategorier variabeln innehåller) och `labels` (vad vi vill namnge dessa) åtskiljs med kommatecken.
+
+Kom ihåg att `? factor` alltid visar hjälpavsnittet för funktionen och ger exempel på hur den kan användas.
+
+```{r}
+#Make factor, specify levels & labels, and write to data frame
+dat$item.1 <- factor(dat$item.1, 
+                      levels = c(1,2), 
+                      labels = c("M", "F"))
+```
+
+### Ändra namn på variabler i en data frame
+
+Det vore även smidigt att ge kolumnen ett mer beskrivande namn. Minns tillbaka hur funktionen `names()` gav oss alla kolumn-namn ovan, vi kollar igen:
+
+```{r}
+#Column names in data frame
+names(dat)
+```
+
+Vi kan använda `names()` för döpa om variabler i en data frame. Vi ser att *item.1* är den andra variabeln i *data*, dvs har index 2. Men, det är strikt förbjudet att använda detta för att t.ex skriva: `names(dat)[2] <- "sex"`
+
+Om kolumnen skulle få ett annat index, vilket ofta händer, kommer det sluta med att vi döper om någon annan kolumn och har förstört vår data totalt.
+
+Istället hänvisar vi till ett dynamiskt index, `names(dat) == "item.1"`, som döper om alla kolumner med namnet *item.1* till *sex*
+
+```{r}
+#Rename variable for sex
+names(dat)[names(dat) == "item.1"] <- "sex"
+```
+
+På samma sätt definerar vi sen vairabeln *item.3* som faktor-variabel och ändrar namn på den och variabel *item.2*
+
+```{r}
+#| include: false
+#Make factor of "do you have a hearing problem?"
+dat$item.3 <- factor(dat$item.3, 
+                      levels = c(1,2,3,4), 
+                      labels = c("No", "Sometimes", 
+                                 "Often", "Always"))
+
+names(dat)[names(dat) == "item.2"] <- "age"
+names(dat)[names(dat) == "item.3"] <- "hearing"
+```
+
+### Skapa nya variabler
+
+Vårat dataset innehåller hörtrösklar vid fyra frekvenser (0.5, 1, 2 och 4 kHz) per öra som vi kan använda för att räkna ut tonmedelvärde (*Pure Tone Average*; PTA4). Det är lätt att skapa/ange en ny variabel i vår data frame med `$` från medelvärdet av de fyra andra variablerna. Radbyte spelar ingen roll i scriptet, så länge alla symboler är på plats. Här skrivs varje referens till en variabel på egen rad för att det ska vara lättläsligt.
+
+```{r}
+#Create variable for PTA4 Right
+dat$PTA4.R <- (dat$R500 +  
+               dat$R1000 + 
+               dat$R2000 + 
+               dat$R4000) / 4
+
+#Create variable for PTA4 Left
+dat$PTA4.L <- (dat$L500 +  
+               dat$L1000 + 
+               dat$L2000 + 
+               dat$L4000) / 4
+```
+
+Vi har 25 variabler som heter THI_1, THI_2, THI_3.. osv. till THI_25. Dessa representerar svar på ett frågeformulär om tinnitus kallat *Tinnitus Handicap Inventory*. Svaren är redan kodade som antingen 0, 2 eller 4 vilket motsvarar de poäng man får för svarsalternativen. Maxpoäng är alltså 25 \* 4 = 100, och ju högre poäng desto mer besvärad är man av tinnitus.
+
+Det vore intressant att skapa en ny variabel med varje försökspersons totala poäng på THI. Vi namnger denna variabel som *THIscore*. Det finns flera sätt att göra detta på. Enklast vore att helt enkelt summera de 25 variablerna:
+
+```{r}
+#| eval: false
+
+#Sum all THI-variables to new variable THIscore
+dat$THIscore <- dat$THI_1 + dat$THI_2 + dat$THI_3 ...
+```
+
+Det är funktionsdugligt, men det blir mycket att skriva och blir både svårläst, oflexibelt och ostabilt om t.ex en variabel får ett nytt namn eller kodas på något annat sätt. Det finns alltid flera sätt att åstadkomma samma sak på med R, och vissa är smidigare än andra.
+
+I det här fallet kan vi skapa en ny variabel som vi kallar *THI.names* med hjälp av funktionen `paste()` som klistrar ihop (eller 'konkatenerar') olika saker med en avskiljare (eller 'separator') som vi specificerar. Här konkatenerar vi bokstäverna "THI" med talen 1 till 25 avskiljda med ett understreck "\_"
+
+På så sätt innehåller då vår nya variabel *THI_names* namnen på alla de kolumner vi är intresserade av att summera.
+
+```{r}
+#Create variable of column names relevant to THI
+THI.names <- paste("THI", 1:25, sep="_")
+```
+
+Vi kan sen använda funktionen `apply()` för att applicera funktionen `sum()` på alla rader (rader specificerar vi med `MARGIN = 1`) i vår data frame som har ett namn som finns i variablen *THI.names* och skriva resultatet till en ny variabel som vi igen kallar *THI.score*
+
+```{r}
+#Calculate total THI score per subject
+dat$THIscore <- apply(dat[,THI.names], MARGIN = 1, FUN = sum)
+```
+
+## Analys
+
+Vi kan nu besvara våra frågeställningar från början av dokumentet.
+
+### 1. Är det skillnad mellan hur män och kvinnor besvarar THI?
+
+För att besvara denna fråga gör vi en box-plot och ett t-test mellan `THIscore` för män och kvinnor.
+
+Vi börjar enkelt, men är du estetiskt lagd finns det massor av verktyg för att göra vackra figurer med R, se till exempel [galleriet för paketet ggplot2](https://r-graph-gallery.com/ggplot2-package.html).
+
+```{r}
+#Box plot of THI score for sex
+plot(dat$sex, dat$THIscore,
+     main = "THI score for Male (M) and Female (F)",
+     xlab = "Sex",
+     ylab = "THI total score")
+
+#Create subset of women and men separately
+F.THI <- dat[dat$sex == "F", "THIscore"]
+M.THI <- dat[dat$sex == "M", "THIscore"]
+
+#Perform t-test
+t.test(F.THI, M.THI)
+```
+
+Vår plot verkar indikera att män fått lite högre poäng på THI och vårat testresultat: **t = -3.99, p \< 0.01** påvisar en statistiskt signifikant skillnad mellan grupperna.
+
+Ovan skapade vi en ny variable för män respektive kvinnors THIscore som vi sedan använde i funktionen `t.test()`. Vi hade också direkt kunnat skriva `t.test(dat[dat$sex == "F", "THIscore"], dat[dat$sex == "M", "THIscore"])` och fått samma resultat, men då är det svårt att utläsa vad som händer. Ett tredje alternativ är att använda paketet `arsenal` för att direkt ställa upp en deskriptiv tabell med funktionen `tableby()`.
+
+Kom ihåg att om vi inte har paketet installerat kör vi först `install.packages("arsenal")` och sedan `library(arsenal)` för att aktivera det i sessionen.
+
+```{r, results='asis'}
+#Read in neccesary library
+library(arsenal)
+
+#Create table using tableby()
+tab1 <- tableby(sex ~ THIscore, data = dat, 
+                digits = 1, 
+                total = FALSE)
+
+#Print table
+summary(tab1, text = TRUE)
+```
+
+På det här sättet får vi dessutom antal observationer, medelvärde och standardavvikelse utskrivet. Vi läser hjälpavsnittet genom att skriva `? tableby` i konsollen och ser att `digits = 1` kan användas för att specificera antalet decimaler, `total = FALSE` döljer kolumnen för total (män + kvinnor), och att p-värdet som rapporteras är: *equivalent to two-samples t-test.*
+
+### 2. Förändras hörseln med åldern?
+
+För att besvara den här frågan gör vi en enkel linjär regression av hur ökad ålder påverkar tonmedelvärdet PTA4 för höger och vänster öra separat. För linjär regression använder vi funktionen `lm()` och spar resultatet (vår regressionsmodell) som en en ny variabel `linear.reg.L` när vi använder PTA för vänster öra och `linear.reg.R` när vi använder PTA för höger öra.
+
+```{r}
+#Save linear regression model to variable
+linear.reg.L <- lm(data = dat, PTA4.L ~ age)
+linear.reg.R <- lm(data = dat, PTA4.R ~ age)
+
+#Print summary of linear regression model
+summary(linear.reg.L)
+summary(linear.reg.R)
+```
+
+Genom att använda `summary()` för regressionsmodellen vi skapat skrivs en överblick av resultatet ut i konsollen. Vi ser att koefficienten `age`, för vänster öra, är 0.15 med ett p-värde långt under 0.001 (3.76e-06 är 0.00000376). Det betyder att det finns ett signifikant samband mellan ålder och tonmedelvärde där vår modell påvisar att PTA4 ökar med 0.15 dB per levnadsår. Förhållandet är signifikant även för höger öra (PTA4.R) med koefficienten 0.13.
+
+Vi känner oss redo för att använda lite mer avancerade plot-alternativ. Vi specificerar att vi vill ha två plots brevid varandra (med `par()`) och skapar en scatter-plot för vänster och höger öras PTA som en funktion av ålder. Funktionen `abline()` låter oss dessutom lägga till linjen från vår linjära regressionsmodell på respektive plot.
+
+```{r}
+#Set plot space to two columns
+par(mfrow=c(1,2))
+
+#Scatter plot of PTA LEFT as function of age
+plot(dat$age, dat$PTA4.L,
+     pch = 20,
+     main = "PTA Left ear vs age",
+     xlab = "Age (years)",
+     ylab = "PTA Left (dB HL)")
+
+#Best fit linear regression LEFT
+abline(linear.reg.L, lwd = 2, col = "red")
+
+#Scatter plot of PTA RIGHT as function of age
+plot(dat$age, dat$PTA4.R,
+     pch = 20,
+     main = "PTA Right ear vs age",
+     xlab = "Age (years)",
+     ylab = "PTA Right (dB HL)")
+
+#Best fit linear regression RIGHT
+abline(linear.reg.R, lwd = 2, col = "red")
+```
+
+## Sammanfattning
+
+För att gå från rådata till figurer och statistisk analys som besvarar våra två frågeställningar behöver vi totalt runt 60 rader kod, inklusive kommentarer, i vårat script (nedan).
+
+```{r}
+#| eval: false
+
+#Load libraries
+library(readr)
+library(arsenal)
+
+#Load data
+dat <- read_csv("data.csv")
+
+#Specify factor variables
+dat$item.1 <- factor(dat$item.1, 
+                      levels = c(1,2), 
+                      labels = c("M", "F"))
+
+dat$item.3 <- factor(dat$item.3, 
+                      levels = c(1,2,3,4), 
+                      labels = c("No", "Sometimes", 
+                                 "Often", "Always"))
+#Rename variables
+names(dat)[names(dat) == "item.1"] <- "sex"
+names(dat)[names(dat) == "item.2"] <- "age"
+names(dat)[names(dat) == "item.3"] <- "hearing"
+
+#Create variables for PTA
+dat$PTA4.R <- (dat$R500 + dat$R1000 + dat$R2000 + dat$R4000) / 4
+dat$PTA4.L <- (dat$L500 + dat$L1000 + dat$L2000 + dat$L4000) / 4
+
+#Create variable of column names relevant to THI
+THI.names <- paste("THI", 1:25, sep="_")
+
+#Calculate total THI score per subject
+dat$THIscore <- apply(dat[,THI.names], MARGIN = 1, FUN = sum)
+
+#Create table using tableby()
+tab1 <- tableby(sex ~ THIscore, data = dat, 
+                digits = 1, 
+                total = FALSE)
+
+#Print table
+summary(tab1, text = TRUE)
+
+#Box plot of THI score for sex
+plot(dat$sex, dat$THIscore,
+     main = "THI score for Male (M) and Female (F)",
+     xlab = "Sex",
+     ylab = "THI total score")
+
+#Save linear regression model to variable
+linear.reg.L <- lm(data = dat, PTA4.L ~ age)
+linear.reg.R <- lm(data = dat, PTA4.R ~ age)
+
+#Print summary of linear regression model
+summary(linear.reg.L)
+summary(linear.reg.R)
+
+#Set plot space to two columns
+par(mfrow=c(1,2))
+
+#Scatter plot of PTA LEFT as function of age
+plot(dat$age, dat$PTA4.L,
+     pch = 20,
+     main = "PTA Left ear vs age",
+     xlab = "Age (years)",
+     ylab = "PTA Left (dB HL)")
+#Best fit linear regression LEFT
+abline(linear.reg.L, lwd = 2, col = "red")
+
+#Scatter plot of PTA RIGHT as function of age
+plot(dat$age, dat$PTA4.R,
+     pch = 20,
+     main = "PTA Right ear vs age",
+     xlab = "Age (years)",
+     ylab = "PTA Right (dB HL)")
+#Best fit linear regression RIGHT
+abline(linear.reg.R, lwd = 2, col = "red")
+```
